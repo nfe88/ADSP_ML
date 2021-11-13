@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import math
 
 from scipy import signal
+from scipy.stats import chi2
 #import pandas as pd
 
 #######################
@@ -542,10 +543,203 @@ class TriangDic():
             tolAppRatio=0.0
         return tolAppRatio
 
+class SigmoDic():
 
+    def __init__(self):
+        self.s = 0
+        self.rho = 0
+        self.xi = 0
+        self.phi = 0
+        self.u = 0
+        self.beta = 0
+        self.signalSize = 0
+        self.complexAtom = []
+        self.realAtom = []
+        self.normr = 0.0
 
+    def setSignalSize(self,signalSize):
+        self.signalSize = signalSize
+    
+    def getSignalSize(self,parameters):
+        return self.signalSize
+    
+    def setComplexAtom(self,parameters,N):
+        self.rho = parameters.rho
+        self.xi = parameters.xi
+        self.phi = parameters.phase
+        self.u = parameters.u
+        self.beta = parameters.eta
+        self.s = parameters.s
+       
+        self.complexAtom = np.zeros(N,dtype='complex')
+        
+        for n in np.arange(N):
+            self.realAtom[n] = 0
+            
+            if(self.xi != 0):
+                self.complexAtom[n] = complex(
+                    math.exp(-(self.s(n-self.u)/self.rho))/(1+((self.s*(n-self.u))/self.beta)^-2)**2
+                    *math.cos((n*self.xi)+self.phi)
+                    ,math.exp(-(self.s(n-self.u)/self.rho))/(1+((self.s*(n-self.u))/self.beta)^-2)**2
+                    *math.sin((n*self.xi)+self.phi)
+                )
+            else:
+                self.complexAtom[n] = complex(1,0.0)
+        
+    def getComplexAtom(self):
+        return self.complexAtom
+    
+    def setRealAtom(self,parameters,N):
+        self.rho = parameters.rho
+        self.xi = parameters.xi
+        self.phi = parameters.phase
+        self.u = parameters.u
+        self.beta = parameters.eta
+        self.s = parameters.s
 
-#bateAtom=BateDic()
+        self.realAtom = np.zeros(N)
+
+        for n in np.arrange(N):
+            self.realAtom[n]=0
+
+            if(self.xi != 0):
+                self.realAtom[n] = math.exp(-(self.s(n-self.u)/self.rho))/(1+((self.s*(n-self.u))/self.beta)^-2)**2\
+                    *math.cos((n*self.xi)+self.phi)
+            else:
+                self.realAtom[n] = math.exp(-(self.s(n-self.u)/self.rho))/(1+((self.s*(n-self.u))/self.beta)^-2)**2\
+                    *math.cos(self.phi)
+            
+        if (np.linalg.norm(self.realAtom)!=0):
+            self.normr = np.linalg.norm(self.realAtom)
+            self.realAtom = self.realAtom/np.linalg.norm(self.realAtom)
+        
+    def getRealAtom(self):
+        return self.realAtom
+    
+    def getAtomNorm(self):
+        return self.normr
+
+    def adjustParameters(self,residue,chosenParm):
+
+        if (int(1e10*chosenParm.phase)==0):
+            chosenParm.phase=0.0
+        if (chosenParm.phase >= (2*math.pi)):
+            chosenParm.phase -= 2*math.pi
+        if (chosenParm.phase < 0 ):
+            chosenParm.phase += 2*math.pi
+        if (chosenParm.innerProd < 0.0):
+            chosenParm.phase += math.pi
+            chosenParm.innerProd = - chosenParm.innerProd
+    
+    def getApproxRatio(self,signalSize):
+
+        lambda_med_ger=[0.3,0.22,0.18,0.13,0.12,0.09,0.065]
+
+        if (signalSize == 64):
+            tolAppRatio = lambda_med_ger[0]
+        elif (signalSize == 128):
+            tolAppRatio = lambda_med_ger[1]
+        elif (signalSize == 256):
+            tolAppRatio = lambda_med_ger[2]
+        elif ( signalSize == 512):
+            tolAppRatio = lambda_med_ger[3]
+        elif ( signal == 1024):
+            tolAppRatio = lambda_med_ger[4]
+        elif (signalSize == 2048):
+            tolAppRatio = lambda_med_ger[5]
+        elif (signalSize == 4096):
+            tolAppRatio = lambda_med_ger[6]
+        else:
+            tolAppRatio=0.0
+        return tolAppRatio
+ 
+class ChiDic():
+    def __init__(self):
+        self.rho = 0
+        self.u = 0
+        self.signalSize = 0
+        self.complexAtom = []
+        self.realAtom = []
+        self.normr = []
+        
+    def setSignalSize(self,signalSize):
+        self.signalSize = signalSize
+        
+    def getSignalSize(self,parameters): 
+        return self.signalSize
+        
+    def setComplexAtom(self,parameters,N): 
+        self.rho = parameters.rho #Funciona como grau de liberdade da distribuição
+        self.u = parameters.u
+        self.xi = parameters.xi
+        self.phi = parameters.phase
+        
+        self.complexAtom = np.zeros(N,dtype = 'complex')
+        
+        for n in np.arange(N):
+            for k in np.arange(self.rho):
+                    self.complexAtom[n] = complex(chi2.pdf(n,k)*math.cos(self.xi*n+self.phi),
+                    chi2.pdf(n,k)*math.sin(self.xi*n+self.phi))
+  
+    def getComplexAtom(self):
+        return self.complexAtom
+        
+    def setRealAtom(self,parameters,N):
+        self.rho = parameters.rho #Funciona como grau de liberdade da distribuição
+        self.u = parameters.u
+        
+        self.realAtom = np.zeros(N)
+        
+        for n in np.arange(N):
+            for k in np.arange(self.rho):
+                    self.realAtom[n] = chi2.pdf(n,k)
+                    
+        if (np.linalg.norm(self.realAtom)!=0):
+            self.normr = np.linalg.norm(self.realAtom)
+            self.realAtom = self.realAtom/np.linalg.norm(self.realAtom)        
+                    
+    def getRealAtom(self):
+        return self.realAtom
+        
+    def getAtomNorm(self):
+        return self.normr
+    
+    def adjustParameters(self,residue,chosenParm):
+
+        if (int(1e10*chosenParm.phase)==0):
+            chosenParm.phase=0.0
+        if (chosenParm.phase >= (2*math.pi)):
+            chosenParm.phase -= 2*math.pi
+        if (chosenParm.phase < 0 ):
+            chosenParm.phase += 2*math.pi
+        if (chosenParm.innerProd < 0.0):
+            chosenParm.phase += math.pi
+            chosenParm.innerProd = - chosenParm.innerProd
+    
+    def getApproxRatio(self,signalSize):
+
+        lambda_med_ger=[0.3,0.22,0.18,0.13,0.12,0.09,0.065]
+
+        if (signalSize == 64):
+            tolAppRatio = lambda_med_ger[0]
+        elif (signalSize == 128):
+            tolAppRatio = lambda_med_ger[1]
+        elif (signalSize == 256):
+            tolAppRatio = lambda_med_ger[2]
+        elif ( signalSize == 512):
+            tolAppRatio = lambda_med_ger[3]
+        elif ( signal == 1024):
+            tolAppRatio = lambda_med_ger[4]
+        elif (signalSize == 2048):
+            tolAppRatio = lambda_med_ger[5]
+        elif (signalSize == 4096):
+            tolAppRatio = lambda_med_ger[6]
+        else:
+            tolAppRatio=0.0
+        return tolAppRatio
+    
+
+    
 #N=512
 #parms=[0.2,0,0,N/2,N/2,N-1,0.4]
 #realAtom,_=bateAtom.setRealAtom(parms,N)

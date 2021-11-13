@@ -64,9 +64,11 @@ def DANNO(residue,dicSize,chosenNet,step,L,approxRatio,net1,net2,net3):
     else: print("Invalid Net1")
     print(f"NetDic:    {chosenDic}\n")
     return chosenDic ,chosenNet
+    #Comentário do Nicholas: Adicionar os 2 dicionário a DANNO depois
 
 def matchingPursuit(residue, chosenParm ,dicSize,dicData,decompData,step,chosenDic,dicAtoms,a0,b0,flagOMP,Fs):
    
+   #FALTA ALTERAR (NICHOLAS)
  #   blockRange=PanelFiles.FileDecompBlockRange()
   #  blockRange.loadData('panelBlockRange.dat')
 
@@ -103,6 +105,10 @@ def matchingPursuit(residue, chosenParm ,dicSize,dicData,decompData,step,chosenD
     triangDic.setSignalSize(dicSize)
     bateDic = Dictionary.BateDic()
     bateDic.setSignalSize(dicSize)
+    sigmoDic = Dictionary.SigmoDic()
+    sigmoDic = setSignalSize(dicSize)
+    chiDic = Dictionary.ChiDic()
+    chiDic = Dictionary.ChiDic()
 
     parm=AtomClass.Atom()
 
@@ -292,6 +298,87 @@ def matchingPursuit(residue, chosenParm ,dicSize,dicData,decompData,step,chosenD
                     if (math.fabs(maxInnerProd)>math.fabs(chosenParm.innerProd)):
                         #print(maxInnerProd)
                         setParameters(chosenParm,dicType,maxInnerProd,(1.0/decay),xi,chosenOptPhase,chosenTau,chosenTau,N-1,rise)
+                        
+                        
+ if (dicType == 7): #Dicionário de Sigmóides Exponenciais
+                
+                if (MPType == 3):
+            
+                    # Real Atom
+                    parm.setAtom(rho=decay,eta=rise,s=scale,dicType=7)
+                    sigmoDic.setRealAtom(parm,2*N)
+                    realAtomWin=sigmoDic.getRealAtom()
+                    
+                    # Complex Atom
+
+                    for k in np.arange(Nfreq):
+
+                        xi=xi_vec[k]
+                       
+
+                        if ((xi==0)or(xi>=((2*math.pi)/s))):
+                            # Xi
+                            parm.setAtom(rho=decay,eta=rise,xi=xi,s=scale,dicType=7)
+                            sigmoDicDic.setComplexAtom(parm,N)
+                            complexAtomXi=sigmoDic.getComplexAtom()
+                            #if j==0:
+                                #plt.plot(residue)
+                                #plt.show()
+                            #2Xi
+                            parm.setAtom(rho=decay,eta=rise,xi=2*xi,s=scale,dicType=7)
+                            sigmoDic.setComplexAtom(parm,N)
+                            complexAtom2Xi=sigmoDic.getComplexAtom()
+
+                    maxInnerProd,chosenTau,chosenOptPhase = fastMPKolasaModified(residue,maxInnerProd,chosenOptPhase,chosenTau,dicSize,1,deltaTau,xi,realAtomWin,complexAtomXi,complexAtom2Xi,conv_zxi0_w2,fileName,(1.0/decay))
+                        
+                    if (math.fabs(maxInnerProd)>math.fabs(chosenParm.innerProd)):
+                        #print(maxInnerProd)
+                        setParameters(chosenParm,dicType,maxInnerProd,(1.0/decay),xi,chosenOptPhase,chosenTau,chosenTau,N-1,rise)
+
+
+if (dicType == 8): #Dicionário de Bateman
+                
+                if (MPType == 3):
+                    #print("MP Function")
+
+
+                    #beta=rise
+                    #rho=decay
+                    
+                    # Real Atom
+                    parm.setAtom(rho=freedom,dicType=8)
+                    chiDic.setRealAtom(parm,2*N)
+                    realAtomWin=chiDic.getRealAtom()
+                    #if j==0:
+                        #plt.plot(realAtomWin)
+                        #plt.show()
+                    
+                    # Complex Atom
+
+                    for k in np.arange(Nfreq):
+
+                        xi=xi_vec[k]
+                       
+
+                        if ((xi==0)or(xi>=((2*math.pi)/s))):
+                            # Xi
+                            parm.setAtom(rho=freedom,xi=xi,dicType=8)
+                            chiDic.setComplexAtom(parm,N)
+                            complexAtomXi=chiDic.getComplexAtom()
+                            #if j==0:
+                                #plt.plot(residue)
+                                #plt.show()
+                            #2Xi
+                            parm.setAtom(rho=freedom,xi=2*xi,dicType=8)
+                            chiDic.setComplexAtom(parm,N)
+                            complexAtom2Xi=chiDic.getComplexAtom()
+
+                    maxInnerProd,chosenTau,chosenOptPhase = fastMPKolasaModified(residue,maxInnerProd,chosenOptPhase,chosenTau,dicSize,1,deltaTau,xi,realAtomWin,complexAtomXi,complexAtom2Xi,conv_zxi0_w2,fileName,(1.0/decay))
+                        
+                    if (math.fabs(maxInnerProd)>math.fabs(chosenParm.innerProd)):
+                        #print(maxInnerProd)
+                        setParameters(chosenParm,dicType,maxInnerProd,(1.0/decay),xi,chosenOptPhase,chosenTau,chosenTau,N-1,rise) #Dúvida
+
 
 def fastMPKolasaModified(residue,maxInnerProd,chosenOptPhase,chosenTau,N,decincAsymmFlag,deltaTau,xi,realAtomWin,complexAtomXi,complexAtom2Xi,conv_zxi0_w2,fileName,s):
     
@@ -385,7 +472,12 @@ def setParameters(parm,dicType,innerProd,s,xi,optPhase,tau,a,b,eta):
         parm.setAtom(rho=1/s,xi=xi,phase=optPhase,u=tau,a=a,b=b,eta=eta,innerProd=innerProd,s=s,dicType=dicType)
     elif (dicType==6):
         parm.setAtom(rho=1/s,xi=xi,phase=optPhase,u=tau,a=a,b=b,eta=eta,innerProd=innerProd,s=s,dicType=dicType)
-        #print(parm)
+        
+    elif (dicType==7):
+        parm.setAtom(rho=1/s,xi=xi,phase=optPhase,u=tau,a=a,b=b,eta=eta,innerProd=innerProd,s=s,dicType=dicType)
+        
+    elif (dicType==8):
+        parm.setAtom(rho=1/s,xi=xi,phase=optPhase,u=tau,a=a,b=b,eta=eta,innerProd=innerProd,s=s,dicType=dicType)
         
     else:
         print("DicType Inválido")
@@ -403,6 +495,14 @@ def adjustParameters(residue,parm):
         dic.adjustParameters(residue,parm)
     elif (parm.dicType == 6):
         dic = Dictionary.BateDic()
+        dic.setSignalSize(len(residue))
+        dic.adjustParameters(residue,parm)
+    elif (parm.dicType == 7):
+        dic = Dictionary.SigmoDic()
+        dic.setSignalSize(len(residue))
+        dic.adjustParameters(residue,parm)
+    elif (parm.dicType == 8):
+        dic = Dictionary.ChiDic()
         dic.setSignalSize(len(residue))
         dic.adjustParameters(residue,parm)
     else:
@@ -424,6 +524,18 @@ def updateResidue(residue,norm,dicSize,parm):
 
     elif (parm.dicType == 6):
         dic = Dictionary.BateDic()
+        dic.setSignalSize(dicSize)
+        dic.setRealAtom(parm,dicSize)
+        realAtom = dic.getRealAtom()
+    
+    elif (parm.dicType == 7):
+        dic = Dictionary.SigmoDic()
+        dic.setSignalSize(dicSize)
+        dic.setRealAtom(parm,dicSize)
+        realAtom = dic.getRealAtom()
+     
+    elif (parm.dicType == 8):
+        dic = Dictionary.ChiDic()
         dic.setSignalSize(dicSize)
         dic.setRealAtom(parm,dicSize)
         realAtom = dic.getRealAtom()
